@@ -1,0 +1,107 @@
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+
+spring:
+  application:
+    name: wallet-service
+  threads:
+    virtual:
+      enabled: false
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:wallet_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USER:digitalwallet}
+    password: ${DB_PASSWORD:digitalwallet}
+    hikari:
+      maximum-pool-size: 20
+      # fail fast under overload (answered with 503 + Retry-After) instead of queueing for long
+      connection-timeout: 3000
+      # a payment waits at most 5s for a locked wallet row (MySQL default: 50s)
+      connection-init-sql: SET SESSION innodb_lock_wait_timeout = 5
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        type.preferred_uuid_jdbc_type: VARCHAR
+  flyway:
+    enabled: true
+  mail:
+    # Mailpit locally (web inbox on http://localhost:8025); a real SMTP server in production
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 3000
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    consumer:
+      group-id: wallet-service
+      auto-offset-reset: earliest
+    listener:
+      concurrency: 3
+
+digitalwallet:
+  currency: INR
+  redis-address: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+  jwt:
+    # Demo default only. Always override JWT_SECRET outside local development.
+    secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
+    issuer: digitalwallet
+    ttl: ${JWT_TTL:1h}
+  admin:
+    email: ${ADMIN_EMAIL:admin@digitalwallet.dev}
+    password: ${ADMIN_PASSWORD:Admin@12345}
+  limits:
+    transfers-per-minute: ${TRANSFERS_PER_MINUTE:10}
+  password-reset:
+    code-ttl: 10m
+    max-attempts: 5
+    from-address: no-reply@digitalwallet.dev
+  qr:
+    # Demo default only. Override QR_SECRET outside local development.
+    secret: ${QR_SECRET:local-dev-qr-signing-key-change-me-0123456789}
+    max-validity: 24h
+  outbox:
+    batch-size: 100
+    poll-interval-ms: 500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    # email is optional for the service to work, so a mail outage must not mark it DOWN
+    mail:
+      enabled: false
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.apache.kafka: WARN
+    org.redisson: WARN

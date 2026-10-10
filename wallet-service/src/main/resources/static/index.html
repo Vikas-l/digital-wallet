@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Digital Wallet</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%233b5bdb'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='sans-serif'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ================================================================ login / register -->
+<section id="authView" class="auth">
+    <!-- left: brand panel with the digital bank illustration -->
+    <div class="auth-hero">
+        <div class="brand light"><span class="logo small">₹</span> Digital Wallet</div>
+        <svg class="illustration" viewBox="0 0 420 320" role="img" aria-label="A phone wallet next to a bank, with coins and a card">
+            <!-- ground shadow -->
+            <ellipse cx="210" cy="292" rx="180" ry="14" fill="#1e3aa8" opacity="0.35"/>
+            <!-- bank building -->
+            <g transform="translate(22 92)">
+                <polygon points="0,52 95,4 190,52" fill="#ffffff" opacity="0.95"/>
+                <circle cx="95" cy="34" r="11" fill="#fbbf24"/>
+                <text x="95" y="39" font-size="13" font-weight="700" text-anchor="middle" fill="#7c4a03" font-family="sans-serif">₹</text>
+                <rect x="8" y="52" width="174" height="12" rx="2" fill="#dbe4ff"/>
+                <rect x="20" y="70" width="16" height="96" rx="3" fill="#ffffff" opacity="0.9"/>
+                <rect x="60" y="70" width="16" height="96" rx="3" fill="#ffffff" opacity="0.9"/>
+                <rect x="114" y="70" width="16" height="96" rx="3" fill="#ffffff" opacity="0.9"/>
+                <rect x="154" y="70" width="16" height="96" rx="3" fill="#ffffff" opacity="0.9"/>
+                <rect x="84" y="112" width="22" height="54" rx="4" fill="#9fb3ff"/>
+                <rect x="0" y="166" width="190" height="14" rx="3" fill="#dbe4ff"/>
+                <rect x="-6" y="180" width="202" height="10" rx="3" fill="#ffffff" opacity="0.9"/>
+            </g>
+            <!-- connection arcs between bank and phone -->
+            <path d="M200 120 C235 70, 265 70, 290 96" stroke="#c7d2fe" stroke-width="3" stroke-dasharray="6 7" fill="none"/>
+            <circle cx="290" cy="96" r="5" fill="#fbbf24"/>
+            <!-- phone -->
+            <g transform="translate(262 52)">
+                <rect x="0" y="0" width="132" height="236" rx="22" fill="#0f1b4d"/>
+                <rect x="8" y="10" width="116" height="216" rx="16" fill="#f5f7ff"/>
+                <rect x="46" y="16" width="40" height="6" rx="3" fill="#0f1b4d"/>
+                <!-- balance card on screen -->
+                <rect x="18" y="34" width="96" height="58" rx="10" fill="#3b5bdb"/>
+                <text x="28" y="54" font-size="8" fill="#dbe4ff" font-family="sans-serif">Balance</text>
+                <text x="28" y="76" font-size="16" font-weight="700" fill="#ffffff" font-family="sans-serif">₹4,070</text>
+                <!-- action dots -->
+                <circle cx="34" cy="112" r="10" fill="#e0e7ff"/><text x="34" y="116" font-size="11" text-anchor="middle" fill="#3b5bdb" font-family="sans-serif">+</text>
+                <circle cx="66" cy="112" r="10" fill="#e0e7ff"/><path d="M61 112 l10 -5 -3 10 -2 -3z" fill="#3b5bdb"/>
+                <circle cx="98" cy="112" r="10" fill="#e0e7ff"/><rect x="93" y="107" width="10" height="10" rx="1" fill="none" stroke="#3b5bdb" stroke-width="1.6"/>
+                <!-- activity rows -->
+                <rect x="18" y="134" width="96" height="20" rx="6" fill="#ffffff"/>
+                <circle cx="29" cy="144" r="5" fill="#bbf7d0"/><rect x="38" y="141" width="40" height="5" rx="2" fill="#cbd5e1"/>
+                <rect x="88" y="141" width="18" height="5" rx="2" fill="#16a34a"/>
+                <rect x="18" y="160" width="96" height="20" rx="6" fill="#ffffff"/>
+                <circle cx="29" cy="170" r="5" fill="#fecaca"/><rect x="38" y="167" width="34" height="5" rx="2" fill="#cbd5e1"/>
+                <rect x="88" y="167" width="18" height="5" rx="2" fill="#dc2626"/>
+                <rect x="18" y="186" width="96" height="20" rx="6" fill="#ffffff"/>
+                <circle cx="29" cy="196" r="5" fill="#fde68a"/><rect x="38" y="193" width="44" height="5" rx="2" fill="#cbd5e1"/>
+                <rect x="88" y="193" width="18" height="5" rx="2" fill="#16a34a"/>
+            </g>
+            <!-- bank card -->
+            <g transform="translate(196 212) rotate(-12)">
+                <rect x="0" y="0" width="96" height="60" rx="9" fill="#fbbf24"/>
+                <rect x="0" y="12" width="96" height="10" fill="#b45309" opacity="0.45"/>
+                <rect x="10" y="34" width="16" height="12" rx="2" fill="#fef3c7"/>
+                <rect x="34" y="40" width="44" height="5" rx="2" fill="#fef3c7"/>
+            </g>
+            <!-- coins -->
+            <g font-family="sans-serif" font-weight="700" text-anchor="middle">
+                <circle cx="236" cy="56" r="17" fill="#fbbf24"/><circle cx="236" cy="56" r="12" fill="#fcd34d"/>
+                <text x="236" y="61" font-size="13" fill="#92400e">₹</text>
+                <circle cx="402" cy="196" r="13" fill="#fbbf24"/><circle cx="402" cy="196" r="9" fill="#fcd34d"/>
+                <text x="402" y="200" font-size="10" fill="#92400e">₹</text>
+                <circle cx="60" cy="58" r="11" fill="#fbbf24" opacity="0.9"/><circle cx="60" cy="58" r="7" fill="#fcd34d"/>
+            </g>
+            <!-- sparkles -->
+            <path d="M150 34 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffffff" opacity="0.8"/>
+            <path d="M390 40 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#ffffff" opacity="0.7"/>
+        </svg>
+        <h2 class="auth-tagline">Your money, one tap away.</h2>
+        <ul class="auth-points">
+            <li>Send money to anyone instantly</li>
+            <li>Scan &amp; pay with secure QR codes</li>
+            <li>Earn cashback automatically</li>
+        </ul>
+    </div>
+
+    <!-- right: forms -->
+    <div class="auth-panel">
+        <div class="card auth-card">
+            <div id="authTabs" class="segmented">
+                <button class="tab active" data-tab="login" type="button">Log in</button>
+                <button class="tab" data-tab="register" type="button">Register</button>
+            </div>
+
+            <form id="loginForm" class="form">
+                <h2 class="form-title">Welcome back</h2>
+                <label>Email <input name="email" type="email" required autocomplete="username"></label>
+                <label>Password <input name="password" type="password" required autocomplete="current-password"></label>
+                <div class="form-links"><a href="#" id="forgotLink">Forgot password?</a></div>
+                <button class="btn primary block" type="submit">Log in</button>
+                <p class="hint center">Admin demo: admin@digitalwallet.dev / Admin@12345</p>
+            </form>
+
+            <form id="registerForm" class="form" hidden>
+                <h2 class="form-title">Create your wallet</h2>
+                <label>Full name <input name="fullName" required maxlength="100" autocomplete="name"></label>
+                <label>Email <input name="email" type="email" required autocomplete="username"></label>
+                <label>Password <input name="password" type="password" required minlength="8" autocomplete="new-password"
+                                       placeholder="8+ characters, a letter and a digit"></label>
+                <button class="btn primary block" type="submit">Create account</button>
+            </form>
+
+            <form id="forgotForm" class="form" hidden>
+                <h2 class="form-title">Forgot your password?</h2>
+                <p class="muted">Enter your email and we'll send you a 6-digit code to reset it.</p>
+                <label>Email <input name="email" type="email" required autocomplete="username"></label>
+                <button class="btn primary block" type="submit">Send reset code</button>
+                <a href="#" class="back-link" data-back>← Back to log in</a>
+            </form>
+
+            <form id="resetForm" class="form" hidden>
+                <h2 class="form-title">Check your email</h2>
+                <p class="muted">We sent a 6-digit code to <strong id="resetEmailLabel"></strong>. It expires in 10 minutes.</p>
+                <p class="dev-note">Running locally? Open the test inbox at
+                    <a href="http://localhost:8025" target="_blank" rel="noopener">localhost:8025</a></p>
+                <input name="email" type="hidden">
+                <label>6-digit code <input name="code" inputmode="numeric" pattern="\d{6}" maxlength="6" required
+                                           autocomplete="one-time-code" class="code-input" placeholder="••••••"></label>
+                <label>New password <input name="newPassword" type="password" required minlength="8" autocomplete="new-password"
+                                           placeholder="8+ characters, a letter and a digit"></label>
+                <button class="btn primary block" type="submit">Set new password</button>
+                <a href="#" class="back-link" data-back>← Back to log in</a>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ app shell -->
+<div id="appView" class="shell" hidden>
+    <header class="topbar">
+        <div class="brand"><span class="logo small">₹</span> Digital Wallet</div>
+        <div id="userBox" class="user-box">
+            <span class="avatar" id="userAvatar"></span>
+            <div class="user-text">
+                <span id="userEmail"></span>
+                <span id="roleBadge" class="badge"></span>
+            </div>
+            <button id="logoutBtn" class="btn ghost small" type="button">Log out</button>
+        </div>
+    </header>
+
+    <nav class="nav" id="nav">
+        <a href="#home" data-view="home">
+            <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+            <span>Home</span></a>
+        <a href="#add" data-view="add">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+            <span>Add money</span></a>
+        <a href="#send" data-view="send">
+            <svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6z"/></svg>
+            <span>Send</span></a>
+        <a href="#qr" data-view="qr">
+            <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2v2h-2zM18 14h2v2h-2z"/></svg>
+            <span>QR</span></a>
+        <a href="#rewards" data-view="rewards">
+            <svg viewBox="0 0 24 24"><path d="M4 10h16v10H4zM2 7h20v3H2zM12 7v13M12 7c-2-4-6-3-6-1s3 1 6 1c3 0 6 1 6-1s-4-3-6 1"/></svg>
+            <span>Rewards</span></a>
+        <a href="#admin" data-view="admin" id="adminNav" hidden>
+            <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
+            <span>Admin</span></a>
+    </nav>
+
+    <main class="content">
+
+        <!-- ------------------------------------------------ home -->
+        <section class="view" data-view="home">
+            <div class="hero">
+                <div class="hero-top">
+                    <div>
+                        <div class="hero-label">Wallet balance</div>
+                        <div id="balance" class="hero-balance">–</div>
+                    </div>
+                    <button id="refreshBtn" class="icon-btn" type="button" title="Refresh" aria-label="Refresh">
+                        <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>
+                    </button>
+                </div>
+                <div class="chip">Cashback earned <strong id="cashbackTotal">–</strong></div>
+                <div class="quick-actions">
+                    <a href="#add"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add money</a>
+                    <a href="#send"><svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6z"/></svg>Send</a>
+                    <a href="#qr" data-qr-tab="receive"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2v2h-2zM18 14h2v2h-2z"/></svg>Receive</a>
+                    <a href="#qr" data-qr-tab="pay"><svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/></svg>Scan &amp; pay</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <h2>Recent activity</h2>
+                    <span class="muted" id="activityCount"></span>
+                </div>
+                <ul id="activityList" class="activity"></ul>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------ add money -->
+        <section class="view" data-view="add" hidden>
+            <h1 class="page-title">Add money</h1>
+            <p class="page-sub">Top up your wallet. Top-ups of ₹1,000 or more earn a 1% bonus (once a day).</p>
+            <div class="card narrow">
+                <form id="topUpForm" class="form">
+                    <label>Amount
+                        <span class="amount-input"><span>₹</span>
+                            <input name="amount" type="number" min="1" max="100000" step="0.01" required placeholder="0"></span>
+                    </label>
+                    <div class="chips">
+                        <button type="button" class="chip-btn" data-amount="500">₹500</button>
+                        <button type="button" class="chip-btn" data-amount="1000">₹1,000</button>
+                        <button type="button" class="chip-btn" data-amount="2000">₹2,000</button>
+                        <button type="button" class="chip-btn" data-amount="5000">₹5,000</button>
+                    </div>
+                    <button class="btn primary block" type="submit">Add money</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------ send money -->
+        <section class="view" data-view="send" hidden>
+            <h1 class="page-title">Send money</h1>
+            <p class="page-sub">Pay anyone on Digital Wallet by email. Transfers of ₹500+ earn 2% cashback (max ₹100, 3 a day).</p>
+            <div class="card narrow">
+                <form id="transferForm" class="form">
+                    <label>Recipient email <input name="recipientEmail" type="email" required placeholder="friend@example.com"></label>
+                    <label>Amount
+                        <span class="amount-input"><span>₹</span>
+                            <input name="amount" type="number" min="1" max="100000" step="0.01" required placeholder="0"></span>
+                    </label>
+                    <label>Note <input name="note" maxlength="140" placeholder="What's it for? (optional)"></label>
+                    <button class="btn primary block" type="submit">Send money</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------ QR -->
+        <section class="view" data-view="qr" hidden>
+            <h1 class="page-title">QR payments</h1>
+            <p class="page-sub">Show a QR code to get paid, or scan someone else's to pay them.</p>
+            <div class="segmented wide">
+                <button class="qr-tab active" data-qr="receive" type="button">Receive</button>
+                <button class="qr-tab" data-qr="pay" type="button">Scan &amp; pay</button>
+            </div>
+
+            <div class="card narrow" id="qrReceivePanel">
+                <form id="qrCreateForm" class="form">
+                    <label>Amount
+                        <span class="amount-input"><span>₹</span>
+                            <input name="amount" type="number" min="1" max="100000" step="0.01"
+                                   placeholder="Leave empty to let the payer choose"></span>
+                    </label>
+                    <div class="row">
+                        <label class="check"><input name="singleUse" type="checkbox" checked> Single use</label>
+                        <label class="inline">Valid for
+                            <select name="validityMinutes">
+                                <option value="15">15 minutes</option>
+                                <option value="60">1 hour</option>
+                                <option value="1440">24 hours</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button class="btn primary block" type="submit">Generate QR code</button>
+                </form>
+                <div id="qrResult" class="qr-result" hidden>
+                    <img id="qrImage" alt="Payment QR code">
+                    <div id="qrInfo" class="muted center"></div>
+                    <div class="row center">
+                        <a id="qrDownload" class="btn ghost small" download="digital-wallet-qr.png">Download</a>
+                        <button id="qrCopy" class="btn ghost small" type="button">Copy code</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card narrow" id="qrPayPanel" hidden>
+                <div class="scan-options">
+                    <button id="cameraBtn" class="scan-option" type="button">
+                        <svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                        <span id="cameraLabel">Scan with camera</span>
+                    </button>
+                    <label class="scan-option">
+                        <svg viewBox="0 0 24 24"><path d="M4 16v4h16v-4M12 4v12M7 9l5-5 5 5"/></svg>
+                        Upload QR image
+                        <input id="qrFile" type="file" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div id="cameraBox" class="camera-box" hidden>
+                    <video id="camera" playsinline muted></video>
+                    <div class="camera-frame"></div>
+                    <p class="muted center">Hold the QR code inside the square</p>
+                </div>
+                <details class="paste">
+                    <summary>Or paste the QR code text</summary>
+                    <textarea id="qrPayload" rows="3" placeholder="DW1...."></textarea>
+                    <button id="qrCheckBtn" class="btn ghost block" type="button">Check QR code</button>
+                </details>
+
+                <div id="qrPreview" class="preview" hidden>
+                    <div class="preview-head">
+                        <span class="avatar large" id="previewAvatar"></span>
+                        <div>
+                            <div class="muted">Paying</div>
+                            <div class="preview-name"><strong id="previewName"></strong></div>
+                            <div id="previewEmail" class="muted"></div>
+                        </div>
+                    </div>
+                    <div id="previewFixed" class="preview-amount"></div>
+                    <label id="previewAmountLabel">Amount
+                        <span class="amount-input"><span>₹</span>
+                            <input id="previewAmount" type="number" min="1" max="100000" step="0.01" placeholder="0"></span>
+                    </label>
+                    <div id="previewMeta" class="muted center"></div>
+                    <button id="qrPayBtn" class="btn primary block" type="button">Pay now</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------ rewards -->
+        <section class="view" data-view="rewards" hidden>
+            <h1 class="page-title">Rewards</h1>
+            <p class="page-sub">Cashback is added to your wallet automatically, a moment after you pay.</p>
+            <div class="stats">
+                <div class="stat"><div class="muted">Total cashback</div><div class="stat-value" id="rewardsTotal">–</div></div>
+                <div class="stat"><div class="muted">Rewards earned</div><div class="stat-value" id="rewardsCount">–</div></div>
+            </div>
+            <div class="two-col">
+                <div class="card">
+                    <h2>My cashback</h2>
+                    <ul id="rewardsList" class="list"></ul>
+                </div>
+                <div class="card">
+                    <h2>Top earners this month</h2>
+                    <ol id="leaderboardList" class="leaderboard"></ol>
+                </div>
+            </div>
+            <div class="card">
+                <h2>How to earn</h2>
+                <ul class="offers">
+                    <li><span class="offer-pct">2%</span><div><strong>Send money</strong>
+                        <div class="muted">On transfers of ₹500 or more · up to ₹100 · 3 times a day</div></div></li>
+                    <li><span class="offer-pct">1%</span><div><strong>Add money</strong>
+                        <div class="muted">On top-ups of ₹1,000 or more · up to ₹50 · once a day</div></div></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ------------------------------------------------ admin -->
+        <section class="view" data-view="admin" hidden>
+            <h1 class="page-title">Cashback rules <span class="badge">admin</span></h1>
+            <p class="page-sub">Switch offers on or off. Changes apply to the very next payment.</p>
+            <div class="card table-card">
+                <table class="table">
+                    <thead><tr><th>Rule</th><th>Type</th><th class="num">Min</th><th class="num">Cashback</th><th class="num">Max</th><th class="num">Per day</th><th>Status</th></tr></thead>
+                    <tbody id="rulesBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/jsQR.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

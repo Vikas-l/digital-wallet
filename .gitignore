@@ -1,0 +1,15 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
+.env
+scripts/qr-demo.png
+load-test/results/
+
+# personal interview preparation (kept locally, not published)
+docs/INTERVIEW_GUIDE.md
+docs/handbook/
+docs/*.pdf
