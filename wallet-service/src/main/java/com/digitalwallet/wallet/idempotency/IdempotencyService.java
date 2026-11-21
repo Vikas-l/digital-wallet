@@ -16,6 +16,8 @@ import com.digitalwallet.wallet.wallet.WalletTransaction;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class IdempotencyService {
 
+    private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
     private static final Pattern KEY_FORMAT = Pattern.compile("^[A-Za-z0-9_-]{8,64}$");
     private static final Duration GUARD_TTL = Duration.ofSeconds(30);
 
@@ -51,6 +54,16 @@ public class IdempotencyService {
 
     /** Must be called outside a transaction so that a replay sees committed data. */
     public Result execute(Long userId, String key, String requestHash, Supplier<WalletTransaction> action) {
+        return execute(userId, key, requestHash, () -> { }, action);
+    }
+
+    /**
+     * @param beforeNewExecution runs only when the request is NOT a replay, right before the
+     *        work starts. Used for rate limiting, so that a client safely retrying with the
+     *        same key gets its original answer instead of a 429.
+     */
+    public Result execute(Long userId, String key, String requestHash, Runnable beforeNewExecution,
+            Supplier<WalletTransaction> action) {
         if (key == null || !KEY_FORMAT.matcher(key).matches()) {
             throw ApiException.badRequest("INVALID_IDEMPOTENCY_KEY",
                     "Idempotency-Key header must be 8-64 characters of letters, digits, '-' or '_'");
@@ -59,12 +72,10 @@ public class IdempotencyService {
         if (replay.isPresent()) {
             return replay.get();
         }
+        beforeNewExecution.run();
 
-        RBucket<String> guard = redisson.getBucket("digitalwallet:idem:" + userId + ":" + key, StringCodec.INSTANCE);
-        if (!guard.setIfAbsent("processing", GUARD_TTL)) {
-            throw ApiException.conflict("REQUEST_IN_PROGRESS",
-                    "A request with this Idempotency-Key is already being processed");
-        }
+        RBucket<String> guard = acquire("digitalwallet:idem:" + userId + ":" + key);
+        boolean guarded = guard != null;
         try {
             // the previous holder of the guard may have committed just before we acquired it
             replay = findExisting(userId, key, requestHash);
@@ -75,7 +86,38 @@ public class IdempotencyService {
         } catch (DataIntegrityViolationException e) {
             return findExisting(userId, key, requestHash).orElseThrow(() -> e);
         } finally {
+            if (guarded) {
+                release(guard);
+            }
+        }
+    }
+
+    /**
+     * Returns the guard we now hold, or null if Redis is unavailable and we continue without it
+     * (the DB unique key still stops duplicates). Throws 409 if another request holds it.
+     */
+    private RBucket<String> acquire(String name) {
+        RBucket<String> guard;
+        boolean acquired;
+        try {
+            guard = redisson.getBucket(name, StringCodec.INSTANCE);
+            acquired = guard.setIfAbsent("processing", GUARD_TTL);
+        } catch (RuntimeException e) {
+            log.warn("Idempotency guard unavailable, relying on the database unique key: {}", e.getMessage());
+            return null;
+        }
+        if (!acquired) {
+            throw ApiException.conflict("REQUEST_IN_PROGRESS",
+                    "A request with this Idempotency-Key is already being processed");
+        }
+        return guard;
+    }
+
+    private static void release(RBucket<String> guard) {
+        try {
             guard.delete();
+        } catch (RuntimeException e) {
+            log.warn("Could not release idempotency guard (it expires by itself): {}", e.getMessage());
         }
     }
 

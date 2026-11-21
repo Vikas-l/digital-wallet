@@ -69,14 +69,22 @@ digitalwallet:
   # origins allowed to call this API from a browser (the web UI is served by wallet-service)
   cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8081,http://127.0.0.1:8081}
   jwt:
-    # must match wallet-service (the token issuer)
-    secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
+    # Tokens are RS256, signed by wallet-service. This service only needs the PUBLIC key:
+    # fetched from wallet-service's JWKS endpoint, or given directly as a PEM (JWT_PUBLIC_KEY).
+    jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+    public-key: ${JWT_PUBLIC_KEY:}
     issuer: digitalwallet
+    # Redis down: accept otherwise valid tokens (true) or reject every request (false)
+    revocation-check-fail-open: ${JWT_REVOCATION_FAIL_OPEN:true}
   ai:
     enabled: ${AI_ENABLED:false}
   outbox:
     batch-size: 100
     poll-interval-ms: 500
+    # retry a failed event after 1s, 2s, 4s ... (max 5m between tries); give up after 20 tries (~1 hour)
+    max-attempts: 20
+    initial-backoff: 1s
+    max-backoff: 5m
 
 management:
   endpoints:

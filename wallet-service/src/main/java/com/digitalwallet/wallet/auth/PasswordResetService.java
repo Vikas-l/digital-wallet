@@ -46,12 +46,15 @@ public class PasswordResetService {
     private final ResetCodeMailer mailer;
     private final RateLimiter rateLimiter;
     private final TokenRevocationService tokenRevocationService;
+    private final LoginAttemptService loginAttempts;
     private final Duration codeTtl;
     private final int maxAttempts;
 
     public PasswordResetService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             RedissonClient redisson, ResetCodeMailer mailer, RateLimiter rateLimiter,
-            TokenRevocationService tokenRevocationService, WalletProperties properties) {
+            TokenRevocationService tokenRevocationService, LoginAttemptService loginAttempts,
+            WalletProperties properties) {
+        this.loginAttempts = loginAttempts;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.redisson = redisson;
@@ -101,6 +104,7 @@ public class PasswordResetService {
         userRepository.save(user);
         stored.delete();
         attempts.delete();
+        loginAttempts.reset(user.getEmail()); // the real owner proved who they are: unlock login
         tokenRevocationService.revokeAllIssuedBefore(user.getId(), Instant.now());
     }
 

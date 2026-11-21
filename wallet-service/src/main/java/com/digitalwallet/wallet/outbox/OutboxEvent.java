@@ -1,5 +1,6 @@
 package com.digitalwallet.wallet.outbox;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,7 +29,9 @@ public class OutboxEvent implements Persistable<UUID> {
 
     public enum Status {
         PENDING,
-        PUBLISHED
+        PUBLISHED,
+        /** Gave up after the maximum number of attempts; needs a human (alerted via the outbox.events metric). */
+        FAILED
     }
 
     @Id
@@ -66,6 +69,10 @@ public class OutboxEvent implements Persistable<UUID> {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    /** After a failed attempt: the earliest time of the next attempt (exponential backoff). */
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
+
     /** Ids are assigned by the application, so tell Spring Data to INSERT instead of merge. */
     @Transient
     private boolean isNew = true;
@@ -100,11 +107,31 @@ public class OutboxEvent implements Persistable<UUID> {
         this.publishedAt = Instant.now();
         this.attempts++;
         this.lastError = null;
+        this.nextAttemptAt = null;
     }
 
-    public void markFailed(String error) {
+    /**
+     * Records a failed attempt: retried after {@code retryDelay}, or marked FAILED once
+     * {@code maxAttempts} is reached.
+     */
+    public void markFailed(String error, int maxAttempts, Duration retryDelay) {
         this.attempts++;
         this.lastError = error == null ? "unknown" : error.substring(0, Math.min(error.length(), 500));
+        if (attempts >= maxAttempts) {
+            this.status = Status.FAILED;
+            this.nextAttemptAt = null;
+        } else {
+            this.nextAttemptAt = Instant.now().plus(retryDelay);
+        }
+    }
+
+    /** True when the event may be (re)tried now, i.e. it is not waiting out a backoff. */
+    public boolean isDueAt(Instant now) {
+        return nextAttemptAt == null || !nextAttemptAt.isAfter(now);
+    }
+
+    public Instant getNextAttemptAt() {
+        return nextAttemptAt;
     }
 
     @Override

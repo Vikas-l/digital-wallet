@@ -59,10 +59,16 @@ digitalwallet:
   currency: INR
   redis-address: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
   jwt:
-    # Demo default only. Always override JWT_SECRET outside local development.
-    secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
+    # RS256 signing key (PKCS#8 PEM). Empty = a temporary key is generated at startup, so
+    # tokens stop working when the service restarts. Always set JWT_PRIVATE_KEY in production.
+    private-key: ${JWT_PRIVATE_KEY:}
     issuer: digitalwallet
     ttl: ${JWT_TTL:1h}
+    # Redis down: accept otherwise valid tokens (true) or reject every request (false)
+    revocation-check-fail-open: ${JWT_REVOCATION_FAIL_OPEN:true}
+  login:
+    max-failures: 5
+    lockout: 15m
   admin:
     email: ${ADMIN_EMAIL:admin@digitalwallet.dev}
     password: ${ADMIN_PASSWORD:Admin@12345}
@@ -79,6 +85,10 @@ digitalwallet:
   outbox:
     batch-size: 100
     poll-interval-ms: 500
+    # retry a failed event after 1s, 2s, 4s ... (max 5m between tries); give up after 20 tries (~1 hour)
+    max-attempts: 20
+    initial-backoff: 1s
+    max-backoff: 5m
 
 management:
   endpoints:

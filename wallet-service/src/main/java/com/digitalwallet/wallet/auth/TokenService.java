@@ -4,11 +4,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.nimbusds.jose.jwk.RSAKey;
 import com.digitalwallet.wallet.auth.AuthDtos.AuthResponse;
 import com.digitalwallet.wallet.config.WalletProperties;
 import com.digitalwallet.wallet.user.AppUser;
 
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -20,10 +21,12 @@ public class TokenService {
 
     private final JwtEncoder jwtEncoder;
     private final WalletProperties properties;
+    private final String keyId;
 
-    public TokenService(JwtEncoder jwtEncoder, WalletProperties properties) {
+    public TokenService(JwtEncoder jwtEncoder, WalletProperties properties, RSAKey jwtSigningKey) {
         this.jwtEncoder = jwtEncoder;
         this.properties = properties;
+        this.keyId = jwtSigningKey.getKeyID();
     }
 
     public AuthResponse issue(AppUser user) {
@@ -38,7 +41,8 @@ public class TokenService {
                 .claim("email", user.getEmail())
                 .claim("roles", List.of(user.getRole().name()))
                 .build();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        // kid tells verifiers which public key (from the JWKS) to use, which makes key rotation possible
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).keyId(keyId).build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
         return new AuthResponse(token, "Bearer", expiresAt, user.getId(), user.getEmail(), user.getRole().name());
     }
