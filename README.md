@@ -64,7 +64,9 @@ flowchart LR
 | **Ordering** | Events are keyed by userId, so one user's events are processed in order on one partition. This also prevents daily-limit races |
 | **No reward loops** | Reward credits do not emit `TransactionCompleted` |
 | **Auditability** | Double-entry ledger; the test suite checks the ledger sum always equals the balance |
-| **Security** | Stateless JWT (HS256) with USER/ADMIN roles; admin-only rule management; BCrypt passwords |
+| **Security** | Stateless JWT (RS256): only wallet-service holds the private key, the public key is served at `/.well-known/jwks.json` (with `kid` for rotation) and rewards-service verifies with it. USER/ADMIN roles; admin-only rule management; BCrypt passwords; login locked for 15 min after 5 wrong passwords |
+| **Redis outage** | Payments keep working: the idempotency guard and QR claim fall back to the DB unique keys, the rate limiter fails open, and the token revocation check is fail-open or fail-closed by configuration (`JWT_REVOCATION_FAIL_OPEN`) |
+| **Outbox failures** | Per-key blocking (one user's failure never stalls others), exponential backoff 1 s → 5 min, `FAILED` after 20 attempts, `outbox.events{status}` gauge for alerting |
 | **Logout with JWTs** | Token id (`jti`) goes into a Redis denylist with TTL = remaining token life, checked by both services |
 | **Forgot password** | 6-digit OTP by email, stored only as a hash in Redis for 10 minutes; 5 wrong tries destroy it; the same answer whether or not the email exists; a reset logs the user out on every device |
 | **Overload** | Pool exhaustion or a long lock wait answers `503 SERVICE_BUSY` + `Retry-After` instead of 500; lock waits capped at 5 s; safe to retry thanks to idempotency keys |
@@ -140,6 +142,8 @@ docker compose --profile app up -d --build
 - End-to-end demo (Windows): `powershell -ExecutionPolicy Bypass -File scripts\demo.ps1`
 - Load test with consistency checks (Windows, ~8 minutes, isolated from your data): `powershell -ExecutionPolicy Bypass -File scripts\load-test.ps1`
 - Kafka UI (optional): `docker compose --profile tools up -d`, then http://localhost:8090
+
+Tokens are signed with `JWT_PRIVATE_KEY` (RSA, PKCS#8 PEM). If it's not set, wallet-service generates a temporary key at startup (local development only: you log in again after a restart).
 
 To enable AI drafting: `AI_ENABLED=true OPENAI_API_KEY=... [OPENAI_BASE_URL=https://api.groq.com/openai AI_MODEL=llama-3.3-70b-versatile]`.
 

@@ -84,10 +84,11 @@ public class WalletController {
             @RequestHeader(IDEMPOTENCY_KEY) String idempotencyKey,
             @Valid @RequestBody TransferRequest request) {
         Long userId = CurrentUser.id(jwt);
-        rateLimiter.checkPerMinute("transfer", userId, transfersPerMinute);
         String hash = IdempotencyService.fingerprint(TransactionType.TRANSFER,
                 AuthService.normalize(request.recipientEmail()), request.amount().stripTrailingZeros());
+        // rate limit only new transfers: a retry with the same key is replayed, never 429
         return respond(idempotencyService.execute(userId, idempotencyKey, hash,
+                () -> rateLimiter.checkPerMinute("transfer", userId, transfersPerMinute),
                 () -> walletService.transfer(userId, request.recipientEmail(), request.amount(), request.note(),
                         idempotencyKey, hash)));
     }

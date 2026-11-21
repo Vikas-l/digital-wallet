@@ -6,6 +6,8 @@ import java.time.Instant;
 import com.digitalwallet.wallet.config.WalletProperties;
 
 import org.redisson.api.RedissonClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -30,12 +32,18 @@ public class TokenRevocationService implements OAuth2TokenValidator<Jwt> {
     private static final OAuth2Error REVOKED =
             new OAuth2Error("invalid_token", "The token has been revoked", null);
 
+    private static final OAuth2Error UNAVAILABLE =
+            new OAuth2Error("invalid_token", "The token could not be checked right now, please retry", null);
+    private static final Logger log = LoggerFactory.getLogger(TokenRevocationService.class);
+
     private final RedissonClient redisson;
     private final Duration tokenTtl;
+    private final boolean failOpen;
 
     public TokenRevocationService(RedissonClient redisson, WalletProperties properties) {
         this.redisson = redisson;
         this.tokenTtl = properties.jwt().ttl();
+        this.failOpen = properties.jwt().revocationCheckFailOpen();
     }
 
     public void revoke(Jwt jwt) {
@@ -54,16 +62,33 @@ public class TokenRevocationService implements OAuth2TokenValidator<Jwt> {
                 .set(String.valueOf(instant.getEpochSecond()), tokenTtl);
     }
 
+    /**
+     * The signature and expiry are already checked by then; this only asks Redis whether the
+     * token was revoked. If Redis is unreachable the behaviour is a deliberate, configurable
+     * choice: fail open (accept the token; it still expires within the JWT lifetime) keeps the
+     * app usable during a Redis outage, fail closed rejects every request.
+     */
     @Override
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
-        if (jwt.getId() != null && redisson.getBucket(REVOKED_PREFIX + jwt.getId(), StringCodec.INSTANCE).isExists()) {
-            return OAuth2TokenValidatorResult.failure(REVOKED);
+        try {
+            if (jwt.getId() != null
+                    && redisson.getBucket(REVOKED_PREFIX + jwt.getId(), StringCodec.INSTANCE).isExists()) {
+                return OAuth2TokenValidatorResult.failure(REVOKED);
+            }
+            String validAfter = redisson.<String>getBucket(VALID_AFTER_PREFIX + jwt.getSubject(),
+                    StringCodec.INSTANCE).get();
+            if (validAfter != null && jwt.getIssuedAt() != null
+                    && jwt.getIssuedAt().getEpochSecond() < Long.parseLong(validAfter)) {
+                return OAuth2TokenValidatorResult.failure(REVOKED);
+            }
+            return OAuth2TokenValidatorResult.success();
+        } catch (RuntimeException e) {
+            if (failOpen) {
+                log.warn("Revocation check skipped, Redis unavailable (fail-open): {}", e.getMessage());
+                return OAuth2TokenValidatorResult.success();
+            }
+            log.warn("Revocation check failed, Redis unavailable (fail-closed): {}", e.getMessage());
+            return OAuth2TokenValidatorResult.failure(UNAVAILABLE);
         }
-        String validAfter = redisson.<String>getBucket(VALID_AFTER_PREFIX + jwt.getSubject(), StringCodec.INSTANCE).get();
-        if (validAfter != null && jwt.getIssuedAt() != null
-                && jwt.getIssuedAt().getEpochSecond() < Long.parseLong(validAfter)) {
-            return OAuth2TokenValidatorResult.failure(REVOKED);
-        }
-        return OAuth2TokenValidatorResult.success();
     }
 }

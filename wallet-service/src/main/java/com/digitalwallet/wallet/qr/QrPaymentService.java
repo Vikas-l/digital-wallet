@@ -21,6 +21,8 @@ import com.digitalwallet.wallet.wallet.WalletService;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -33,6 +35,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class QrPaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(QrPaymentService.class);
 
     private static final Duration DEFAULT_VALIDITY = Duration.ofMinutes(15);
 
@@ -89,7 +93,11 @@ public class QrPaymentService {
                 qr.expiresAt(), alreadyPaid);
     }
 
-    public IdempotencyService.Result pay(Long payerUserId, PayQrRequest request, String idempotencyKey) {
+    /**
+     * @param beforeNewPayment runs only for a new payment (not for an idempotent replay); used for rate limiting
+     */
+    public IdempotencyService.Result pay(Long payerUserId, PayQrRequest request, String idempotencyKey,
+            Runnable beforeNewPayment) {
         QrCodec.Claims qr = codec.decode(request.payload());
         BigDecimal amount = resolveAmount(qr, request.amount());
         if (qr.payeeUserId().equals(payerUserId)) {
@@ -97,24 +105,51 @@ public class QrPaymentService {
         }
         String hash = IdempotencyService.fingerprint("QR", qr.qrId(), amount.stripTrailingZeros());
 
-        return idempotencyService.execute(payerUserId, idempotencyKey, hash, () -> {
+        return idempotencyService.execute(payerUserId, idempotencyKey, hash, beforeNewPayment, () -> {
             if (!qr.singleUse()) {
                 return walletService.payQr(payerUserId, qr.payeeUserId(), amount, request.note(), null,
                         idempotencyKey, hash);
             }
-            RBucket<String> claim = redisson.getBucket("digitalwallet:qr:claim:" + qr.qrId(), StringCodec.INSTANCE);
-            Duration untilExpiry = Duration.between(codec.now(), qr.expiresAt()).plusMinutes(1);
-            if (!claim.setIfAbsent(String.valueOf(payerUserId), untilExpiry)) {
-                throw ApiException.conflict("QR_ALREADY_USED", "This QR code has already been paid");
-            }
+            RBucket<String> claim = claim("digitalwallet:qr:claim:" + qr.qrId(), payerUserId,
+                    Duration.between(codec.now(), qr.expiresAt()).plusMinutes(1));
             try {
                 return walletService.payQr(payerUserId, qr.payeeUserId(), amount, request.note(), qr.qrId(),
                         idempotencyKey, hash);
             } catch (RuntimeException e) {
-                claim.delete(); // payment failed (e.g. insufficient funds): the bill can still be paid later
+                if (claim != null) {
+                    release(claim); // payment failed (e.g. insufficient funds): the bill can still be paid later
+                }
                 throw e;
             }
         });
+    }
+
+    /**
+     * Returns the claim this payer won, or null if Redis is unavailable (we go on without it and
+     * the unique single_use_qr_id column decides). Throws 409 if another payer already holds it.
+     */
+    private RBucket<String> claim(String name, Long payerUserId, Duration ttl) {
+        RBucket<String> claim;
+        boolean won;
+        try {
+            claim = redisson.getBucket(name, StringCodec.INSTANCE);
+            won = claim.setIfAbsent(String.valueOf(payerUserId), ttl);
+        } catch (RuntimeException e) {
+            log.warn("QR claim unavailable, relying on the database unique key: {}", e.getMessage());
+            return null;
+        }
+        if (!won) {
+            throw ApiException.conflict("QR_ALREADY_USED", "This QR code has already been paid");
+        }
+        return claim;
+    }
+
+    private static void release(RBucket<String> claim) {
+        try {
+            claim.delete();
+        } catch (RuntimeException e) {
+            log.warn("Could not release QR claim (it expires with the code): {}", e.getMessage());
+        }
     }
 
     private static BigDecimal resolveAmount(QrCodec.Claims qr, BigDecimal requested) {

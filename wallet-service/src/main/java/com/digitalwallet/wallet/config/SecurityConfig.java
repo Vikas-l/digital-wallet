@@ -1,11 +1,9 @@
 package com.digitalwallet.wallet.config;
 
-import java.nio.charset.StandardCharsets;
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.digitalwallet.wallet.auth.TokenRevocationService;
 
 import org.springframework.context.annotation.Bean;
@@ -17,7 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -28,8 +26,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Stateless JWT security. wallet-service owns user identities, so it issues
- * HS256 tokens, and validates them like any other resource server.
+ * Stateless JWT security. wallet-service owns user identities, so it issues RS256
+ * tokens with its private key and publishes the public key at /.well-known/jwks.json.
+ * Other services verify tokens with the public key only, so they cannot mint tokens.
  */
 @Configuration
 @EnableMethodSecurity
@@ -39,6 +38,8 @@ public class SecurityConfig {
             // static demo UI (it holds no data; every API call it makes still needs a JWT)
             "/", "/index.html", "/app.js", "/styles.css", "/vendor/**", "/favicon.ico",
             "/api/auth/**",
+            // public signing keys (JWKS) for other services to verify tokens
+            "/.well-known/jwks.json",
             "/actuator/health/**",
             "/actuator/info",
             "/actuator/prometheus",
@@ -60,20 +61,20 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecretKey jwtSigningKey(WalletProperties properties) {
-        return new SecretKeySpec(properties.jwt().secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    RSAKey jwtSigningKey(WalletProperties properties) {
+        return JwtKeys.load(properties.jwt().privateKey());
     }
 
     @Bean
-    JwtEncoder jwtEncoder(SecretKey jwtSigningKey) {
-        return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSigningKey));
+    JwtEncoder jwtEncoder(RSAKey jwtSigningKey) {
+        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwtSigningKey)));
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKey jwtSigningKey, WalletProperties properties,
-            TokenRevocationService tokenRevocationService) {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSigningKey)
-                .macAlgorithm(MacAlgorithm.HS256)
+    JwtDecoder jwtDecoder(RSAKey jwtSigningKey, WalletProperties properties,
+            TokenRevocationService tokenRevocationService) throws JOSEException {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(jwtSigningKey.toRSAPublicKey())
+                .signatureAlgorithm(SignatureAlgorithm.RS256)
                 .build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()),

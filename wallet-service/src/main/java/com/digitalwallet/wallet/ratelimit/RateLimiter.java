@@ -7,6 +7,8 @@ import com.digitalwallet.wallet.error.ApiException;
 
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class RateLimiter {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimiter.class);
 
     private final RedissonClient redisson;
 
@@ -29,11 +33,19 @@ public class RateLimiter {
 
     public void check(String action, String subject, int limit, Duration window) {
         long windowNumber = Instant.now().getEpochSecond() / window.toSeconds();
-        RAtomicLong counter = redisson.getAtomicLong(
-                "digitalwallet:rl:" + action + ":" + subject + ":" + windowNumber);
-        long count = counter.incrementAndGet();
-        if (count == 1) {
-            counter.expire(window.multipliedBy(2));
+        long count;
+        try {
+            RAtomicLong counter = redisson.getAtomicLong(
+                    "digitalwallet:rl:" + action + ":" + subject + ":" + windowNumber);
+            count = counter.incrementAndGet();
+            if (count == 1) {
+                counter.expire(window.multipliedBy(2));
+            }
+        } catch (RuntimeException e) {
+            // fail open: a rate limiter is a protection, not a correctness guarantee, so a
+            // Redis outage must not stop payments (idempotency still relies on the DB)
+            log.warn("Rate limiter unavailable, allowing {} for {}: {}", action, subject, e.getMessage());
+            return;
         }
         if (count > limit) {
             throw ApiException.tooManyRequests("RATE_LIMITED", "Too many " + action + " requests; limit is "

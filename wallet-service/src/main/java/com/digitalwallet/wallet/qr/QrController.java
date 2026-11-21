@@ -69,8 +69,9 @@ public class QrController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PayQrRequest request) {
         Long userId = CurrentUser.id(jwt);
-        rateLimiter.checkPerMinute("transfer", userId, transfersPerMinute);
-        IdempotencyService.Result result = qrPaymentService.pay(userId, request, idempotencyKey);
+        // rate limit only new payments: a retry with the same key is replayed, never 429
+        IdempotencyService.Result result = qrPaymentService.pay(userId, request, idempotencyKey,
+                () -> rateLimiter.checkPerMinute("transfer", userId, transfersPerMinute));
         return ResponseEntity.status(result.replayed() ? HttpStatus.OK : HttpStatus.CREATED)
                 .header("Idempotent-Replayed", String.valueOf(result.replayed()))
                 .body(TransactionResponse.of(result.transaction()));

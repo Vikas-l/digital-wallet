@@ -16,6 +16,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.digitalwallet.common.events.Topics;
 import com.digitalwallet.common.events.TransactionCompletedEvent;
@@ -40,6 +42,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -47,7 +50,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 class RewardsFlowIntegrationTest extends AbstractIntegrationTest {
 
-    private static final String JWT_SECRET = "local-dev-secret-change-me-0123456789abcdef";
+    private static final String OLD_SHARED_SECRET = "local-dev-secret-change-me-0123456789abcdef";
 
     @Autowired
     TestRestTemplate rest;
@@ -270,9 +273,17 @@ class RewardsFlowIntegrationTest extends AbstractIntegrationTest {
         return ThreadLocalRandom.current().nextLong(1_000_000, Long.MAX_VALUE);
     }
 
+    /** Signed like wallet-service signs: RS256 with the private key, verified here with the public key. */
     private static String token(long userId, String role) {
-        var key = new SecretKeySpec(JWT_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        var claims = JwtClaimsSet.builder()
+        return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(TOKEN_SIGNING_KEY)))
+                .encode(JwtEncoderParameters.from(
+                        JwsHeader.with(SignatureAlgorithm.RS256).keyId(TOKEN_SIGNING_KEY.getKeyID()).build(),
+                        claims(userId, role)))
+                .getTokenValue();
+    }
+
+    private static JwtClaimsSet claims(long userId, String role) {
+        return JwtClaimsSet.builder()
                 .id(UUID.randomUUID().toString())
                 .issuer("digitalwallet")
                 .subject(String.valueOf(userId))
@@ -280,9 +291,17 @@ class RewardsFlowIntegrationTest extends AbstractIntegrationTest {
                 .expiresAt(Instant.now().plusSeconds(600))
                 .claim("roles", List.of(role))
                 .build();
-        return new NimbusJwtEncoder(new ImmutableSecret<>(key))
-                .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+    }
+
+    @Test
+    void tokenSignedWithASharedSecretIsRejected() {
+        // the old HS256 scheme: anyone holding the shared secret could mint an ADMIN token
+        var secret = new SecretKeySpec(OLD_SHARED_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        String forged = new NimbusJwtEncoder(new ImmutableSecret<>(secret))
+                .encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims(1L, "ADMIN")))
                 .getTokenValue();
+        assertThat(get("/api/rules", forged).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(get("/api/rules", token(1L, "ADMIN")).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     private ResponseEntity<JsonNode> get(String path, String token) {

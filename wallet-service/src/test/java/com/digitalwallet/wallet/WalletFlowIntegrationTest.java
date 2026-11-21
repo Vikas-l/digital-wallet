@@ -122,6 +122,49 @@ class WalletFlowIntegrationTest extends AbstractIntegrationTest {
         assertThat(login.getBody().get("role").asText()).isEqualTo("ADMIN");
     }
 
+    @Test
+    void loginIsLockedAfterFiveWrongPasswords() {
+        String email = uniqueEmail();
+        register(email);
+        for (int i = 0; i < 5; i++) {
+            ResponseEntity<JsonNode> wrong = rest.postForEntity("/api/auth/login",
+                    Map.of("email", email, "password", "Wrong" + i + "abc"), JsonNode.class);
+            assertError(wrong, HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
+        }
+        // even the correct password is refused while locked, so guessing gains nothing
+        ResponseEntity<JsonNode> locked = rest.postForEntity("/api/auth/login",
+                Map.of("email", email, "password", "Secret123"), JsonNode.class);
+        assertError(locked, HttpStatus.TOO_MANY_REQUESTS, "LOGIN_LOCKED");
+    }
+
+    @Test
+    void successfulLoginResetsTheFailureCounter() {
+        String email = uniqueEmail();
+        register(email);
+        for (int round = 0; round < 2; round++) {
+            for (int i = 0; i < 4; i++) {
+                rest.postForEntity("/api/auth/login", Map.of("email", email, "password", "Wrong1234"), JsonNode.class);
+            }
+            ResponseEntity<JsonNode> ok = rest.postForEntity("/api/auth/login",
+                    Map.of("email", email, "password", "Secret123"), JsonNode.class);
+            assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+    }
+
+    @Test
+    void tokensAreRs256AndThePublicKeyIsPublishedAsJwks() throws Exception {
+        String token = register(uniqueEmail());
+        JsonNode header = objectMapper.readTree(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[0]));
+        assertThat(header.get("alg").asText()).isEqualTo("RS256");
+
+        ResponseEntity<JsonNode> jwks = rest.getForEntity("/.well-known/jwks.json", JsonNode.class);
+        assertThat(jwks.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode key = jwks.getBody().get("keys").get(0);
+        assertThat(key.get("kty").asText()).isEqualTo("RSA");
+        assertThat(key.get("kid").asText()).isEqualTo(header.get("kid").asText());
+        assertThat(key.has("d")).as("private exponent must never be published").isFalse();
+    }
+
     // ---------------------------------------------------------------- top-up & idempotency
 
     @Test

@@ -11,7 +11,6 @@ x-app-env: &app-env
   REDIS_HOST: redis
   REDIS_PORT: 6379
   KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-  JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me-0123456789abcdef}
   JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m -XX:+UseSerialGC
 
 services:
@@ -99,6 +98,8 @@ services:
     environment:
       <<: *app-env
       DB_NAME: wallet_db
+      # RS256 signing key (PKCS#8 PEM); empty = temporary key per start (local dev only)
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       TRANSFERS_PER_MINUTE: ${TRANSFERS_PER_MINUTE:-10}
@@ -127,6 +128,8 @@ services:
     environment:
       <<: *app-env
       DB_NAME: rewards_db
+      # only the PUBLIC key is needed: fetched from wallet-service's JWKS endpoint
+      JWT_JWK_SET_URI: http://wallet-service:8081/.well-known/jwks.json
       AI_ENABLED: ${AI_ENABLED:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-not-configured}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com}

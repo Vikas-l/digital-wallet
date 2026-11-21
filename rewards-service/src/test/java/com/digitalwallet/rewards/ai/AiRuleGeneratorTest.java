@@ -75,9 +75,11 @@ class AiRuleGeneratorTest {
         when(builder.defaultSystem(anyString())).thenReturn(builder);
         when(builder.build()).thenReturn(chatClient);
         RewardsProperties properties = new RewardsProperties(
-                new RewardsProperties.Jwt("x".repeat(32), "digitalwallet"), "redis://localhost:6379",
+                new RewardsProperties.Jwt("http://localhost:8081/.well-known/jwks.json", null, "digitalwallet", true),
+                "redis://localhost:6379",
                 ZoneId.of("Asia/Kolkata"), Duration.ofMinutes(10), new RewardsProperties.Ai(enabled),
-                new RewardsProperties.Outbox(100), java.util.List.of("http://localhost:8081"));
+                new RewardsProperties.Outbox(100, 20, Duration.ofSeconds(1), Duration.ofMinutes(5)),
+                java.util.List.of("http://localhost:8081"));
         return new AiRuleGenerator(builder, validator, properties);
     }
 }

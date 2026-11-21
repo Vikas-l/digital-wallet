@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.redisson.client.RedisException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -53,7 +54,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * safely retry (with the same Idempotency-Key, it can never be charged twice).
      */
     @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class,
-            TransientDataAccessException.class})
+            TransientDataAccessException.class, RedisException.class})
     ResponseEntity<ProblemDetail> handleOverload(Exception ex) {
         log.warn("Service busy, asking the client to retry: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
